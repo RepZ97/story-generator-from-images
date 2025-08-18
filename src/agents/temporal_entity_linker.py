@@ -108,9 +108,13 @@ def _resolve_entities(
 
             if best_match:
                 # Update existing entity
-                consistent_entities[best_match].appearances.append(
+                if (
                     frame_meta["frame_id"]
-                )
+                    not in consistent_entities[best_match].appearances
+                ):
+                    consistent_entities[best_match].appearances.append(
+                        frame_meta["frame_id"]
+                    )
             else:
                 # Create new entity
                 entity_type = entity["type"].lower()
