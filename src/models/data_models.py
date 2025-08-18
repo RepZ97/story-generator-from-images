@@ -1,5 +1,5 @@
 from typing import TypedDict, List, Dict, Any, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Entity(BaseModel):
@@ -16,8 +16,12 @@ class FrameMetadata(TypedDict):
 
 
 class Perspectives(BaseModel):
-    scene_description: str
-    entities: List[Entity]
+    scene_description: str = Field(
+        description="A detailed description of the scene in the image."
+    )
+    entities: List[Entity] = Field(
+        description="A list of entities detected in the scene, each with a name, type and a dictionary of attributes."
+    )
 
 
 class ConsistentEntity(BaseModel):
