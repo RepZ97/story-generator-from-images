@@ -7,6 +7,7 @@ from models.data_models import FrameMetadata, Entity, ConsistentEntity, Event
 from config.environment import openai_api_key
 import os
 from dotenv import load_dotenv
+from utils import clean_json_text
 
 load_dotenv()
 
@@ -257,13 +258,8 @@ def _enhance_with_llm_analysis(
 
         # Parse the response
         try:
-            # Clean the response content - remove markdown code blocks if present
-            content = response.content.strip()
-            if content.startswith("```json"):
-                content = content[7:]  # Remove ```json
-            if content.endswith("```"):
-                content = content[:-3]  # Remove ```
-            content = content.strip()
+            # Remove markdown code blocks if present
+            content = clean_json_text(response.content)
 
             enhanced_analysis = json.loads(content)
             print(
