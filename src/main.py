@@ -5,6 +5,7 @@ from utils import read_images_on_folder
 from models.states import GraphState
 from agents.frame_analyzer import analyze_frames
 from agents.temporal_entity_linker import link_temporal_entities
+from agents.story_synthesizer import synthesize_story
 
 
 def main():
@@ -29,9 +30,17 @@ def main():
         outputs=["consistent_entities"],
     )
 
+    workflow.add_node(
+        "synthesize_story",
+        synthesize_story,
+        inputs=["consistent_entities"],
+        outputs=["final_story"],
+    )
+
     workflow.add_edge(START, "analyze_frames")
     workflow.add_edge("analyze_frames", "link_temporal_entities")
-    workflow.add_edge("link_temporal_entities", END)
+    workflow.add_edge("link_temporal_entities", "synthesize_story")
+    workflow.add_edge("synthesize_story", END)
 
     workflow = workflow.compile(checkpointer=MemorySaver())
 
@@ -72,6 +81,10 @@ def main():
             print(f"    Entities: {', '.join(event['entities_involved'])}")
         if 'significance' in event:
             print(f"    Significance: {event['significance']}")
+
+    # Display final synthesized story
+    print("\n=== Final Story JSON ===")
+    print(result["final_story"]) 
 
 if __name__ == "__main__":
     main()
