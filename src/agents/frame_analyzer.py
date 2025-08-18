@@ -24,11 +24,11 @@ def analyze_frames(state: GraphState):
     print("Starting Frame Analysis...")
     frame_metadata_list = []
 
-    openai_model = os.getenv("OPENAI_MODEL_1")
+    openai_model = os.getenv("OPENAI_MODEL_FRAME")
     if not openai_model:
-        raise ValueError("OPENAI_MODEL_1 environment variable is required")
+        raise ValueError("OPENAI_MODEL_FRAME environment variable is required")
 
-    temperature = float(os.getenv("TEMPERATURE_DET", "0.1"))
+    temperature = float(os.getenv("TEMPERATURE_FRAME", "0.1"))
 
     llm = ChatOpenAI(
         model=openai_model, api_key=openai_api_key, temperature=temperature

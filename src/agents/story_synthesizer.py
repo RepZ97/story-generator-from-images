@@ -116,9 +116,9 @@ def synthesize_story(state: GraphState) -> Dict[str, Any]:
         }
         return {"final_story": json.dumps(minimal, ensure_ascii=False)}
 
-    openai_model = os.getenv("OPENAI_MODEL_2")
+    openai_model = os.getenv("OPENAI_MODEL_STORY")
     if not openai_model:
-        print("OPENAI_MODEL_2 not set; using fallback synthesis.")
+        print("OPENAI_MODEL_STORY not set; using fallback synthesis.")
         synthesized = _fallback_synthesis(consistent_entities)
         return {"final_story": json.dumps(synthesized, ensure_ascii=False)}
 

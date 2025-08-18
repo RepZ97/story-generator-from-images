@@ -185,11 +185,11 @@ def _enhance_with_llm_analysis(
     """
     Use LLM to enhance the entity linking and event extraction with more sophisticated analysis.
     """
-    openai_model = os.getenv("OPENAI_MODEL_1")
+    openai_model = os.getenv("OPENAI_MODEL_TEMP")
     if not openai_model:
-        raise ValueError("OPENAI_MODEL_1 environment variable is required")
+        raise ValueError("OPENAI_MODEL_TEMP environment variable is required")
 
-    temperature = float(os.getenv("TEMPERATURE_STORY", "0.6"))
+    temperature = float(os.getenv("TEMPERATURE_TEMP", "0.6"))
 
     llm = ChatOpenAI(
         model=openai_model, api_key=openai_api_key, temperature=temperature
