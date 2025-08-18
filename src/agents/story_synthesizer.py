@@ -53,7 +53,9 @@ def _fallback_synthesis(consistent_entities: Dict[str, Any]) -> Dict[str, Any]:
 
     # Title
     if characters:
-        first_desc = characters[0].get("description") or characters[0].get("entity_id", "A Story")
+        first_desc = characters[0].get("description") or characters[0].get(
+            "entity_id", "A Story"
+        )
         title = f"Story of {first_desc}"[:80]
     else:
         title = "A Short Story"
@@ -61,24 +63,32 @@ def _fallback_synthesis(consistent_entities: Dict[str, Any]) -> Dict[str, Any]:
     # Main characters
     main_characters = []
     for ch in characters[:5]:
-        main_characters.append({
-            "character_id": ch.get("entity_id", "entity_1"),
-            "description": ch.get("description", "Unknown character"),
-        })
+        main_characters.append(
+            {
+                "character_id": ch.get("entity_id", "entity_1"),
+                "description": ch.get("description", "Unknown character"),
+            }
+        )
 
     # Event sequence
     event_sequence = []
     for ev in events:
-        event_sequence.append({
-            "frame_id": ev.get("frame_id", "frame_000.jpg"),
-            "event_description": ev.get("event", "An event occurs."),
-        })
+        event_sequence.append(
+            {
+                "frame_id": ev.get("frame_id", "frame_000.jpg"),
+                "event_description": ev.get("event", "An event occurs."),
+            }
+        )
 
     # Summary
     if events:
         first_ev = events[0].get("event", "The story begins.")
         last_ev = events[-1].get("event", "It concludes.")
-        summary = f"{first_ev} Then, events unfold, leading to the final moment: {last_ev}"[:300]
+        summary = (
+            f"{first_ev} Then, events unfold, leading to the final moment: {last_ev}"[
+                :300
+            ]
+        )
     else:
         summary = "A brief sequence unfolds involving the listed characters."
 
@@ -106,14 +116,18 @@ def synthesize_story(state: GraphState) -> Dict[str, Any]:
         }
         return {"final_story": json.dumps(minimal, ensure_ascii=False)}
 
-    openai_model = os.getenv("OPENAI_MODEL")
+    openai_model = os.getenv("OPENAI_MODEL_2")
     if not openai_model:
-        print("OPENAI_MODEL not set; using fallback synthesis.")
+        print("OPENAI_MODEL_2 not set; using fallback synthesis.")
         synthesized = _fallback_synthesis(consistent_entities)
         return {"final_story": json.dumps(synthesized, ensure_ascii=False)}
 
+    temperature = float(os.getenv("TEMPERATURE_STORY", "0.6"))
+
     try:
-        llm = ChatOpenAI(model=openai_model, api_key=openai_api_key, temperature=0.2)
+        llm = ChatOpenAI(
+            model=openai_model, api_key=openai_api_key, temperature=temperature
+        )
         prompt = _build_prompt(consistent_entities)
         response = llm.invoke([HumanMessage(content=prompt)])
 
@@ -128,5 +142,3 @@ def synthesize_story(state: GraphState) -> Dict[str, Any]:
         story = _fallback_synthesis(consistent_entities)
 
     return {"final_story": json.dumps(story, ensure_ascii=False)}
-
-
