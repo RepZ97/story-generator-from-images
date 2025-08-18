@@ -64,11 +64,20 @@ def analyze_frames(state: GraphState):
                 # Fallback parsing if JSON is malformed
                 analysis = _parse_fallback_response(result.content)
             
+            # Convert entities to dictionaries for consistency
+            entities_list = analysis.get("entities", [])
+            entities_dicts = []
+            for entity in entities_list:
+                if hasattr(entity, 'model_dump'):
+                    entities_dicts.append(entity.model_dump())
+                else:
+                    entities_dicts.append(entity)
+            
             frame_metadata = FrameMetadata(
                 frame_id=frame_id,
                 timestamp=get_file_timestamp(image_path),
                 scene_description=analysis.get("scene_description", "Scene analysis unavailable"),
-                entities=analysis.get("entities", [])
+                entities=entities_dicts
             )
             
             frame_metadata_list.append(frame_metadata)
