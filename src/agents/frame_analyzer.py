@@ -50,7 +50,21 @@ def analyze_frames(state: GraphState):
                 content=[
                     {
                         "type": "text",
-                        "text": "Please analyze this image and provide detailed information about the scene and entities.",
+                        "text": (
+                            "You are an expert visual scene analyzer. "
+                            "Your task is to examine this single frame and return structured information "
+                            "following the provided schema. "
+                            "Output MUST be compatible with the Perspectives model.\n\n"
+                            "Requirements:\n"
+                            "1. Provide a concise but detailed `scene_description` of the entire image.\n"
+                            "2. List all visible `entities`. For each entity:\n"
+                            "   - `name`: Use a short, consistent identifier (e.g., 'man_1', 'dog_1').\n"
+                            "   - `type`: Broad category (person, animal, object, location, etc.).\n"
+                            "   - `attributes`: Dictionary with rich details (color, clothing, position in frame, action, size, emotion, etc.).\n"
+                            "3. Only include what is clearly visible. Do not speculate.\n"
+                            "4. Distinguish between multiple similar entities (e.g., two people, cars).\n"
+                            "5. This output will later be linked across frames to build a narrative, so consistency matters."
+                        ),
                     },
                     {
                         "type": "image_url",
