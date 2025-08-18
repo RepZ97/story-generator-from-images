@@ -31,3 +31,12 @@ def get_file_timestamp(file_path):
         timestamp = datetime.now()
 
     return timestamp.isoformat() + "Z"
+
+
+def clean_json_text(text: str) -> str:
+    content = text.strip()
+    if content.startswith("```json"):
+        content = content[7:]
+    if content.endswith("```"):
+        content = content[:-3]
+    return content.strip()
