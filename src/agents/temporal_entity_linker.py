@@ -8,8 +8,11 @@ from config.environment import openai_api_key
 import os
 from dotenv import load_dotenv
 from utils import clean_json_text
+from config.logging_config import get_logger
 
 load_dotenv()
+
+logger = get_logger(__name__)
 
 
 def _calculate_similarity(entity1: Dict[str, Any], entity2: Dict[str, Any]) -> float:
@@ -61,6 +64,7 @@ def _resolve_entities(
     """
     Resolve entities across frames and assign consistent IDs.
     """
+    logger.info("Starting entity resolution across frames")
     consistent_entities = {}
     entity_counter = {}
 
@@ -115,6 +119,7 @@ def _resolve_entities(
                     consistent_entities[best_match].appearances.append(
                         frame_meta["frame_id"]
                     )
+                    logger.debug(f"Updated entity {best_match} with frame {frame_meta['frame_id']}")
             else:
                 # Create new entity
                 entity_type = entity["type"].lower()
@@ -133,7 +138,9 @@ def _resolve_entities(
                 consistent_entities[entity_id].appearances.append(
                     frame_meta["frame_id"]
                 )
+                logger.debug(f"Created new entity {entity_id}: {entity['name']}")
 
+    logger.info(f"Entity resolution completed. Found {len(consistent_entities)} unique entities")
     return consistent_entities
 
 
@@ -144,6 +151,7 @@ def _extract_events(
     """
     Extract key events from the frame sequence.
     """
+    logger.info("Starting event extraction from frame sequence")
     events = []
 
     for i, frame_meta in enumerate(frame_metadata_list):
@@ -178,6 +186,7 @@ def _extract_events(
             )
         )
 
+    logger.info(f"Event extraction completed. Found {len(events)} events")
     return events
 
 
@@ -191,6 +200,7 @@ def _enhance_with_llm_analysis(
     """
     openai_model = os.getenv("OPENAI_MODEL_TEMP")
     if not openai_model:
+        logger.error("OPENAI_MODEL_TEMP environment variable is required")
         raise ValueError("OPENAI_MODEL_TEMP environment variable is required")
 
     temperature = float(os.getenv("TEMPERATURE_TEMP", "0.6"))
@@ -270,20 +280,20 @@ def _enhance_with_llm_analysis(
             content = clean_json_text(response.content)
 
             enhanced_analysis = json.loads(content)
-            print(
+            logger.info(
                 f"LLM enhancement successful: {len(enhanced_analysis.get('characters', []))} characters, {len(enhanced_analysis.get('events', []))} events"
             )
             return enhanced_analysis
         except json.JSONDecodeError as e:
-            print(f"JSON parsing error: {e}")
-            print(f"Raw response: {response.content[:500]}...")
+            logger.error(f"JSON parsing error: {e}")
+            logger.error(f"Raw response: {response.content[:500]}...")
             # Fallback to original analysis
             return {
                 "characters": [v.model_dump() for v in consistent_entities.values()],
                 "events": [e.model_dump() for e in events],
             }
     except Exception as e:
-        print(f"Error in LLM enhancement: {str(e)}")
+        logger.error(f"Error in LLM enhancement: {str(e)}")
         # Fallback to original analysis
         return {
             "characters": [v.model_dump() for v in consistent_entities.values()],
@@ -296,29 +306,29 @@ def link_temporal_entities(state: GraphState) -> Dict[str, Any]:
     Main function for the Temporal Entity Linker node.
     Analyzes frame metadata to establish entity continuity and extract events.
     """
-    print("Starting Temporal Entity Linking...")
+    logger.info("Starting Temporal Entity Linking...")
 
     frame_metadata_list = state["frame_metadata"]
 
     if not frame_metadata_list:
-        print("No frame metadata available for analysis")
+        logger.warning("No frame metadata available for analysis")
         return {"consistent_entities": {"characters": [], "events": []}}
 
     # Step 1: Resolve entities across frames
-    print("Resolving entities across frames...")
+    logger.info("Resolving entities across frames...")
     consistent_entities = _resolve_entities(frame_metadata_list)
 
     # Step 2: Extract events
-    print("Extracting events from frame sequence...")
+    logger.info("Extracting events from frame sequence...")
     events = _extract_events(frame_metadata_list, consistent_entities)
 
     # Step 3: Enhance with LLM analysis
-    print("Enhancing analysis with LLM...")
+    logger.info("Enhancing analysis with LLM...")
     enhanced_analysis = _enhance_with_llm_analysis(
         frame_metadata_list, consistent_entities, events
     )
 
-    print(
+    logger.info(
         f"Temporal Entity Linking completed. Found {len(enhanced_analysis['characters'])} characters and {len(enhanced_analysis['events'])} events."
     )
 

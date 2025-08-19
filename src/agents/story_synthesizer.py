@@ -7,10 +7,11 @@ from langchain_openai import ChatOpenAI
 from utils import clean_json_text
 from config.environment import openai_api_key
 from models.states import GraphState
-
+from config.logging_config import get_logger
 
 load_dotenv()
 
+logger = get_logger(__name__)
 
 def _build_prompt(consistent_entities: Dict[str, Any]) -> str:
     characters = consistent_entities.get("characters", [])
@@ -45,7 +46,6 @@ Output ONLY a valid JSON object in this exact schema:
   ]
 }}
 """
-
 
 def _fallback_synthesis(consistent_entities: Dict[str, Any]) -> Dict[str, Any]:
     characters: List[Dict[str, Any]] = consistent_entities.get("characters", [])
@@ -92,6 +92,7 @@ def _fallback_synthesis(consistent_entities: Dict[str, Any]) -> Dict[str, Any]:
     else:
         summary = "A brief sequence unfolds involving the listed characters."
 
+    logger.info("Using fallback story synthesis")
     return {
         "title": title,
         "summary": summary,
@@ -99,15 +100,15 @@ def _fallback_synthesis(consistent_entities: Dict[str, Any]) -> Dict[str, Any]:
         "event_sequence": event_sequence,
     }
 
-
 def synthesize_story(state: GraphState) -> Dict[str, Any]:
     """Final node: synthesize a complete story JSON from consistent entities and events."""
-    print("Starting Story Synthesis...")
+    logger.info("Starting Story Synthesis...")
 
     consistent_entities = state.get("consistent_entities", {})
 
     # If nothing to synthesize, return a minimal object
     if not consistent_entities:
+        logger.warning("No consistent entities available for story synthesis")
         minimal = {
             "title": "A Short Story",
             "summary": "A brief sequence unfolds involving the listed characters.",
@@ -118,7 +119,7 @@ def synthesize_story(state: GraphState) -> Dict[str, Any]:
 
     openai_model = os.getenv("OPENAI_MODEL_STORY")
     if not openai_model:
-        print("OPENAI_MODEL_STORY not set; using fallback synthesis.")
+        logger.warning("OPENAI_MODEL_STORY not set; using fallback synthesis.")
         synthesized = _fallback_synthesis(consistent_entities)
         return {"final_story": json.dumps(synthesized, ensure_ascii=False)}
 
@@ -134,11 +135,13 @@ def synthesize_story(state: GraphState) -> Dict[str, Any]:
         try:
             cleaned = clean_json_text(response.content)
             story = json.loads(cleaned)
+            logger.info("Successfully synthesized story using LLM")
         except json.JSONDecodeError:
-            print("Story Synthesizer: JSON decode failed. Falling back.")
+            logger.warning("Story Synthesizer: JSON decode failed. Falling back.")
             story = _fallback_synthesis(consistent_entities)
     except Exception as e:
-        print(f"Story Synthesizer error: {str(e)}. Falling back.")
+        logger.error(f"Story Synthesizer error: {str(e)}. Falling back.")
         story = _fallback_synthesis(consistent_entities)
 
+    logger.info(f"Story synthesis completed. Generated story with title: '{story.get('title', 'Unknown')}'")
     return {"final_story": json.dumps(story, ensure_ascii=False)}

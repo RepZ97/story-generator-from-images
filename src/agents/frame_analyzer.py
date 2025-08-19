@@ -8,24 +8,25 @@ from models.states import GraphState
 from models.data_models import FrameMetadata, Perspectives
 from config.environment import openai_api_key
 from utils import get_file_timestamp
+from config.logging_config import get_logger
 from dotenv import load_dotenv
 
 load_dotenv()
 
+logger = get_logger(__name__)
 
-def _parse_fallback_response(self, response_content: str) -> Dict[str, Any]:
+def _parse_fallback_response(response_content: str) -> Dict[str, Any]:
     """Fallback parser for malformed JSON responses."""
-
+    logger.warning("Using fallback response parser due to malformed JSON")
     return {"scene_description": "Scene analysis completed", "entities": []}
 
-
 def analyze_frames(state: GraphState):
-
-    print("Starting Frame Analysis...")
+    logger.info("Starting Frame Analysis...")
     frame_metadata_list = []
 
     openai_model = os.getenv("OPENAI_MODEL_FRAME")
     if not openai_model:
+        logger.error("OPENAI_MODEL_FRAME environment variable is required")
         raise ValueError("OPENAI_MODEL_FRAME environment variable is required")
 
     temperature = float(os.getenv("TEMPERATURE_FRAME", "0.1"))
@@ -35,10 +36,9 @@ def analyze_frames(state: GraphState):
     )
 
     for i, image_path in enumerate(state["image_paths"]):
-
         frame_id = f"frame_{i+1:03d}.jpg"
 
-        print(f"Analyzing frame {i+1}/{len(state['image_paths'])}: {frame_id}")
+        logger.info(f"Analyzing frame {i+1}/{len(state['image_paths'])}: {frame_id}")
 
         # Analyze the frame
         try:
@@ -84,6 +84,7 @@ def analyze_frames(state: GraphState):
                 analysis = result.model_dump()
             except json.JSONDecodeError:
                 # Fallback parsing if JSON is malformed
+                logger.warning(f"JSON decode error for frame {frame_id}, using fallback parser")
                 analysis = _parse_fallback_response(result.content)
 
             # Convert entities to dictionaries for consistency
@@ -105,15 +106,18 @@ def analyze_frames(state: GraphState):
             )
 
             frame_metadata_list.append(frame_metadata)
+            logger.info(f"Successfully analyzed frame {frame_id} with {len(entities_dicts)} entities")
 
         except Exception as e:
-            print(f"Error analyzing frame {frame_id}: {str(e)}")
+            logger.error(f"Error analyzing frame {frame_id}: {str(e)}")
 
-            return FrameMetadata(
+            frame_metadata = FrameMetadata(
                 frame_id=frame_id,
                 timestamp=get_file_timestamp(image_path),
                 scene_description="Error analyzing frame",
                 entities=[],
             )
+            frame_metadata_list.append(frame_metadata)
 
+    logger.info(f"Frame analysis completed. Processed {len(frame_metadata_list)} frames")
     return {"frame_metadata": frame_metadata_list}

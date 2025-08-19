@@ -6,14 +6,22 @@ from models.states import GraphState
 from agents.frame_analyzer import analyze_frames
 from agents.temporal_entity_linker import link_temporal_entities
 from agents.story_synthesizer import synthesize_story
+from config.logging_config import setup_logging, get_logger
 
+# Set up logging
+logger = get_logger(__name__)
 
 def main():
+    # Set up logging configuration
+    setup_logging(log_level="INFO", log_file="logs/story_generator.log")
+    
     folder_path = "assests/images/story1"
     if not os.path.isdir(folder_path):
-        print(f"Error: The folder at '{folder_path}' does not exist.")
+        logger.error(f"The folder at '{folder_path}' does not exist.")
+        return
 
     image_paths = read_images_on_folder(folder_path)
+    logger.info(f"Found {len(image_paths)} images in {folder_path}")
 
     workflow = StateGraph(GraphState)
     workflow.add_node(
@@ -45,46 +53,46 @@ def main():
     workflow = workflow.compile(checkpointer=MemorySaver())
 
     # Run the workflow
-    print("Starting story generation workflow...")
+    logger.info("Starting story generation workflow...")
     # Create a thread
     config = {"configurable": {"thread_id": "1"}}
 
     result = workflow.invoke({"image_paths": image_paths}, config)
 
     # Display frame analysis results
-    print("\n=== Frame Analysis Results ===")
+    logger.debug("=== Frame Analysis Results ===")
     for metadata in result["frame_metadata"]:
-        print(f"\nFrame: {metadata['frame_id']}")
-        print(f"Timestamp: {metadata['timestamp']}")
-        print(f"Scene: {metadata['scene_description']}")
-        print(f"Entities found: {len(metadata['entities'])}")
+        logger.debug(f"Frame: {metadata['frame_id']}")
+        logger.debug(f"Timestamp: {metadata['timestamp']}")
+        logger.debug(f"Scene: {metadata['scene_description']}")
+        logger.debug(f"Entities found: {len(metadata['entities'])}")
 
         for entity in metadata["entities"]:
-            print(f"  - {entity['name']}: {entity['type']}")
+            logger.debug(f"  - {entity['name']}: {entity['type']}")
 
     # Display temporal entity linking results
-    print("\n=== Temporal Entity Linking Results ===")
+    logger.debug("=== Temporal Entity Linking Results ===")
     consistent_entities = result["consistent_entities"]
 
-    print(f"\nCharacters ({len(consistent_entities['characters'])}):")
+    logger.debug(f"Characters ({len(consistent_entities['characters'])}):")
     for character in consistent_entities["characters"]:
-        print(f"  - {character['entity_id']}: {character['description']}")
+        logger.debug(f"  - {character['entity_id']}: {character['description']}")
         if "characteristics" in character:
-            print(f"    Characteristics: {', '.join(character['characteristics'])}")
+            logger.debug(f"    Characteristics: {', '.join(character['characteristics'])}")
         if "role" in character:
-            print(f"    Role: {character['role']}")
+            logger.debug(f"    Role: {character['role']}")
 
-    print(f"\nEvents ({len(consistent_entities['events'])}):")
+    logger.debug(f"Events ({len(consistent_entities['events'])}):")
     for event in consistent_entities["events"]:
-        print(f"  - Frame {event['frame_id']}: {event['event']}")
+        logger.debug(f"  - Frame {event['frame_id']}: {event['event']}")
         if "entities_involved" in event:
-            print(f"    Entities: {', '.join(event['entities_involved'])}")
+            logger.debug(f"    Entities: {', '.join(event['entities_involved'])}")
         if "significance" in event:
-            print(f"    Significance: {event['significance']}")
+            logger.debug(f"    Significance: {event['significance']}")
 
     # Display final synthesized story
-    print("\n=== Final Story JSON ===")
-    print(result["final_story"])
+    logger.info("=== Final Story JSON ===")
+    logger.info(result["final_story"])
 
 
 if __name__ == "__main__":
